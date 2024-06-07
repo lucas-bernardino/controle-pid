@@ -1,10 +1,10 @@
 #include <AFMotor.h>
 
-#define HALL_PIN 2
-#define R 0.03
+#define HALL_PIN 13
+#define R 0.3
 #define PERIMETER 2 * PI * R
 
-#define DESIRABLE_SPEED 1
+#define DESIRABLE_SPEED 17
 
 /*
 I put 500 on this, but I still have no idea what's the exactly number
@@ -24,9 +24,9 @@ int counter = 0;
 double integral_term = 0;
 double error_prev = 0;
 
-float kp = 0.05;
-float ki = 0.01;
-float kd = 0.05;
+float kp = 1;
+float ki = 0.00;
+float kd = 0.00;
 
 double pid_controller(double avg, int dt){
   Serial.print("Avg value: ");
@@ -50,37 +50,32 @@ void setup () {
   pinMode(HALL_PIN, INPUT);
   Serial.begin(9600);
   T1 = millis();
-  motor.setSpeed(40); 
-  Serial.println("COMECANDO");
+  motor.setSpeed(90); 
+  Serial.print("Iniciando com setpoint de ");
+  Serial.println(DESIRABLE_SPEED);
 }
 
 void loop () {
   if (digitalRead(HALL_PIN) == LOW) {
-    
-    counter = 0;
-    speed_sum = 0;
-
     T2 = millis();
     time_seconds = (T2 - T1);
     float speed = (PERIMETER / time_seconds) * 1000 * 3.6;
-    speed_sum += speed;
     counter+=1;
-    Serial.print("Velocidade atual:: ");
-    Serial.println(speed);
-    Serial.println("Time_Seconds");
-    Serial.println(time_seconds);
-    double step = pid_controller(speed_sum, time_seconds);
+    if (speed < 50) {
+      Serial.println(speed);
+    }
+    double step = pid_controller(speed, time_seconds);
     Serial.print("PID_CONTROLLER OUTPUT: ");
     Serial.println(step);
     Serial.print("\n");
     if (speed_sum > DESIRABLE_SPEED) {
       Serial.println("Starting backwards"); 
-      motor.step(abs(step), BACKWARD, MICROSTEP);
+      motor.step(abs(step), FORWARD, MICROSTEP);
       Serial.println("Stoping backwards");
     }
     if (speed_sum < DESIRABLE_SPEED) {
       Serial.println("Starting forward");
-      motor.step(abs(step), FORWARD, MICROSTEP);
+      motor.step(abs(step), BACKWARD, MICROSTEP);
       Serial.println("Stoping forward");
     }
     T1 = T2;
