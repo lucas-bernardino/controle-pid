@@ -1,4 +1,7 @@
 import serial
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
 
 def save_serial_data(path):
     file = open(path, "w")
@@ -25,4 +28,18 @@ def save_serial_data(path):
             file.write(f"{vel},{pid}") 
             file.write("\n")
 
-save_serial_data("setpoint_90.csv")
+def plot_data(path, setpoint):
+    df = pd.read_csv(path)
+    velocidade = df["velocidade"].to_numpy()
+    erro = [(x - setpoint) for x in velocidade]
+    pid = df["pid"].to_numpy()
+    tempo = np.arange(0, len(velocidade))
+    print(velocidade)
+    plt.plot(tempo, velocidade, label="Velocidade")
+    plt.plot(tempo, erro, label="Erro")
+    plt.plot(tempo, pid, label="Pid")
+    plt.legend()
+    plt.show()
+
+# save_serial_data("setpoint_90.csv")
+plot_data("setpoint_20.csv", 20)
