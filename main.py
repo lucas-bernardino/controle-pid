@@ -38,6 +38,7 @@ def plot_data(path, setpoint):
     plt.plot(tempo, velocidade, label="Velocidade")
     plt.plot(tempo, erro, label="Erro")
     plt.plot(tempo, pid, label="Pid")
+    plt.yticks(np.arange(min(erro), max(velocidade)))
     plt.legend()
     plt.show()
 
