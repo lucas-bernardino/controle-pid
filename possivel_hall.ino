@@ -21,6 +21,12 @@ float kp = 0.5;
 float ki = 0.00;
 float kd = 0.00;
 
+String setp = "";
+String k_p = "";
+String k_i = "";
+String k_d = "";
+bool is_setup_completed = false; 
+
 double pid_controller(double avg, int dt){
   double error = DESIRABLE_SPEED - avg;
   integral_term = integral_term + (error * dt);
@@ -46,7 +52,36 @@ void setup () {
   Serial.println(DESIRABLE_SPEED);
 }
 
+void read_from_python() {
+  Serial.println("Entrei na funcao");
+  Serial.println("Ready");
+  delay(50);
+  Serial.println("Depois dos segundos");
+  setp = Serial.readStringUntil('S');
+  delay(50);
+  k_p = Serial.readStringUntil('P');
+  delay(50);
+  k_i = Serial.readStringUntil('I');
+  delay(50);
+  k_d = Serial.readStringUntil('D');
+  if (setp != "" && k_p != "" && k_i != "" && k_d != "") {
+    Serial.println("setup_completed");
+    is_setup_completed = true;
+  }
+}
+
 void loop () {
+  if (!is_setup_completed) {
+    read_from_python();
+  }
+  else {
+    Serial.println("Valores: ");
+    Serial.println(setp);
+    Serial.println(k_p);
+    Serial.println(k_i);
+    Serial.println(k_d);
+    delay(3000);
+  }
   if (digitalRead(HALL_PIN) == LOW) {
     T2 = millis();
     time_seconds = (T2 - T1);

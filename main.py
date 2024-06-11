@@ -42,5 +42,21 @@ def plot_data(path, setpoint):
     plt.legend()
     plt.show()
 
+def init_parameters(setpoint, kp, ki, kd):
+    ser = serial.Serial(port='COM4', baudrate=9600)
+    while True:
+        is_ready = str(ser.readline())
+        if "Ready" in is_ready:
+            while True:
+                if "setup_completed" in str(ser.readline()):
+                    return
+                print(str(ser.readline()))
+                ser.write(f"setpoint:{setpoint}S".encode())
+                ser.write(f"kp:{kp}P".encode())
+                ser.write(f"ki:{ki}I".encode())
+                ser.write(f"kd:{kd}D".encode())
+                            
+
 # save_serial_data("setpoint_90.csv")
-plot_data("setpoint_20.csv", 20)
+#plot_data("setpoint_20.csv", 20)
+init_parameters("25", "0.5", "3.14", "2.73")
