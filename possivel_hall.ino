@@ -4,8 +4,6 @@
 #define R 0.3429
 #define PERIMETER 2 * PI * R
 
-#define DESIRABLE_SPEED 25
-
 signed long T1 = 0;
 signed long T2 = 0;
 signed long time_seconds = 0;
@@ -17,6 +15,7 @@ int counter = 0;
 double integral_term = 0;
 double error_prev = 0;
 
+float setpoint = 0.0;
 float kp = 0.5;
 float ki = 0.00;
 float kd = 0.00;
@@ -43,14 +42,6 @@ void backwardstep() {
   motor.onestep(BACKWARD, MICROSTEP);
 }
 
-void setup () {
-  pinMode(HALL_PIN, INPUT);
-  Serial.begin(9600);
-  T1 = millis();
-  motor.setSpeed(90); 
-  Serial.print("setpont:");
-  Serial.println(DESIRABLE_SPEED);
-}
 
 void read_from_python() {
   Serial.println("Entrei na funcao");
@@ -65,22 +56,31 @@ void read_from_python() {
   delay(50);
   k_d = Serial.readStringUntil('D');
   if (setp != "" && k_p != "" && k_i != "" && k_d != "") {
+    setp.trim();
+    k_p.trim();
+    k_i.trim();
+    k_d.trim();
+    setpoint = setp.toFloat();
+    kp = k_p.toFloat();
+    ki = k_i.toFloat();
+    kd = k_d.toFloat();
     Serial.println("setup_completed");
     is_setup_completed = true;
   }
 }
 
+void setup () {
+  pinMode(HALL_PIN, INPUT);
+  Serial.begin(9600);
+  T1 = millis();
+  motor.setSpeed(90); 
+}
+
+
 void loop () {
   if (!is_setup_completed) {
+    delay(3000); // Tempo para iniciar o script no python
     read_from_python();
-  }
-  else {
-    Serial.println("Valores: ");
-    Serial.println(setp);
-    Serial.println(k_p);
-    Serial.println(k_i);
-    Serial.println(k_d);
-    delay(3000);
   }
   if (digitalRead(HALL_PIN) == LOW) {
     T2 = millis();
@@ -95,10 +95,10 @@ void loop () {
       double step = pid_controller(speed, time_seconds);
       Serial.print("pid_output:");
       Serial.println(step);
-      if (speed_sum > DESIRABLE_SPEED) {
+      if (speed_sum > setpoint) {
         motor.step(abs(step), FORWARD, MICROSTEP);
       }
-      if (speed_sum < DESIRABLE_SPEED) {
+      if (speed_sum < setpoint) {
         motor.step(abs(step), BACKWARD, MICROSTEP);
       }
     }
