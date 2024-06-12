@@ -3,9 +3,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
+from time import sleep
+
+ser = serial.Serial(port='COM4', baudrate=9600) 
+
 def save_serial_data(path):
     file = open(path, "w")
-    ser = serial.Serial(port='COM4', baudrate=9600)
     flag_vel = False
     flag_pid = False
     file.write("velocidade,pid") # Colunas
@@ -43,20 +46,19 @@ def plot_data(path, setpoint):
     plt.show()
 
 def init_parameters(setpoint, kp, ki, kd):
-    ser = serial.Serial(port='COM4', baudrate=9600)
     while True:
         is_ready = str(ser.readline())
         if "Ready" in is_ready:
             while True:
                 if "setup_completed" in str(ser.readline()):
+                    print("Parameters initialized successfully.")
                     return
-                print(str(ser.readline()))
-                ser.write(f"setpoint:{setpoint}S".encode())
-                ser.write(f"kp:{kp}P".encode())
-                ser.write(f"ki:{ki}I".encode())
-                ser.write(f"kd:{kd}D".encode())
+                ser.write(f"{setpoint}S".encode())
+                ser.write(f"{kp}P".encode())
+                ser.write(f"{ki}I".encode())
+                ser.write(f"{kd}D".encode())
                             
 
-# save_serial_data("setpoint_90.csv")
+init_parameters("17", "0.5", "0.0", "0.0")
+save_serial_data("setpoint_17.csv")
 #plot_data("setpoint_20.csv", 20)
-init_parameters("25", "0.5", "3.14", "2.73")
