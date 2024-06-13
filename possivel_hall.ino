@@ -27,7 +27,7 @@ String k_d = "";
 bool is_setup_completed = false; 
 
 double pid_controller(double avg, int dt){
-  double error = DESIRABLE_SPEED - avg;
+  double error = setpoint - avg;
   integral_term = integral_term + (error * dt);
   float derivative_term = (error - error_prev) / dt;
   error_prev = error;
@@ -44,10 +44,8 @@ void backwardstep() {
 
 
 void read_from_python() {
-  Serial.println("Entrei na funcao");
   Serial.println("Ready");
   delay(50);
-  Serial.println("Depois dos segundos");
   setp = Serial.readStringUntil('S');
   delay(50);
   k_p = Serial.readStringUntil('P');
