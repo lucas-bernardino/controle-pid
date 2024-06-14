@@ -77,7 +77,7 @@ void setup () {
 
 void loop () {
   if (!is_setup_completed) {
-    delay(3000); // Tempo para iniciar o script no python
+    delay(1000); // Tempo para iniciar o script no python
     read_from_python();
   }
   if (digitalRead(HALL_PIN) == LOW) {
@@ -93,10 +93,10 @@ void loop () {
       double step = pid_controller(speed, time_seconds);
       Serial.print("pid_output:");
       Serial.println(step);
-      if (speed_sum > setpoint) {
+      if (speed > setpoint) {
         motor.step(abs(step), FORWARD, MICROSTEP);
       }
-      if (speed_sum < setpoint) {
+      if (speed < setpoint) {
         motor.step(abs(step), BACKWARD, MICROSTEP);
       }
     }
