@@ -5,7 +5,7 @@ import numpy as np
 
 from time import sleep
 
-ser = serial.Serial(port='COM4', baudrate=9600) 
+ser = serial.Serial(port='COM3', baudrate=9600) 
 
 def save_serial_data(path):
     file = open(path, "w")
@@ -25,7 +25,6 @@ def save_serial_data(path):
             pid = pid[:-5]
             flag_pid = True
         if flag_vel == True and flag_pid == True:
-            print(vel, pid)
             flag_vel = False
             flag_pid = False
             file.write(f"{vel},{pid}") 
@@ -59,6 +58,6 @@ def init_parameters(setpoint, kp, ki, kd):
                 ser.write(f"{kd}D".encode())
                             
 
-init_parameters("17", "0.5", "0.0", "0.0")
-save_serial_data("setpoint_17.csv")
-#plot_data("setpoint_20.csv", 20)
+#init_parameters("35", "0.63", "0.000001", "0.0")
+#save_serial_data("setpoint35_kp_063_ki_106.csv")
+plot_data("setpoint35_kp_063_ki_106.csv", 35)
