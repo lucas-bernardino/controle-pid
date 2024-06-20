@@ -27,7 +27,7 @@ String k_d = "";
 bool is_setup_completed = false; 
 
 double pid_controller(double avg, int dt){
-  double error = DESIRABLE_SPEED - avg;
+  double error = setpoint - avg;
   integral_term = integral_term + (error * dt);
   float derivative_term = (error - error_prev) / dt;
   error_prev = error;
@@ -44,10 +44,8 @@ void backwardstep() {
 
 
 void read_from_python() {
-  Serial.println("Entrei na funcao");
   Serial.println("Ready");
   delay(50);
-  Serial.println("Depois dos segundos");
   setp = Serial.readStringUntil('S');
   delay(50);
   k_p = Serial.readStringUntil('P');
@@ -79,7 +77,7 @@ void setup () {
 
 void loop () {
   if (!is_setup_completed) {
-    delay(3000); // Tempo para iniciar o script no python
+    delay(1000); // Tempo para iniciar o script no python
     read_from_python();
   }
   if (digitalRead(HALL_PIN) == LOW) {
@@ -95,10 +93,10 @@ void loop () {
       double step = pid_controller(speed, time_seconds);
       Serial.print("pid_output:");
       Serial.println(step);
-      if (speed_sum > setpoint) {
+      if (speed > setpoint) {
         motor.step(abs(step), FORWARD, MICROSTEP);
       }
-      if (speed_sum < setpoint) {
+      if (speed < setpoint) {
         motor.step(abs(step), BACKWARD, MICROSTEP);
       }
     }
