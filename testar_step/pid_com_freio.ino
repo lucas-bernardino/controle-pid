@@ -33,7 +33,7 @@ bool is_breaking = false;
 bool flag_break = false;
 bool speed_control_state = true;
 
-bool is_at_setpoint = false;
+bool is_at_setpoint = true;
 
 auto timer = timer_create_default();
 
@@ -75,7 +75,8 @@ void handle_step(float vel, float st) {
 }
 
 void valve_stop() {
-  if (is_at_setpoint) {
+  Serial.println("Handler is off");
+  if (!is_at_setpoint) {
     Serial.println("Acionei LOW");
     digitalWrite(RELAY_PIN, LOW);
     cycles++;
@@ -84,7 +85,8 @@ void valve_stop() {
 }
 
 void valve_handler() {
-  if (is_at_setpoint) {
+  Serial.println("Handler is on");
+  if (!is_at_setpoint) {
     Serial.println("Acionei HIGH");
     digitalWrite(RELAY_PIN, HIGH);
     speed_control_state = true;
@@ -132,15 +134,18 @@ void loop () {
     read_from_python();
   }
   if (digitalRead(HALL_PIN) == LOW && speed_control_state == true && cycles < 10) {
-    Serial.println("Estou na area de leitura");
     long time_delta = 0;
     speed = get_speed(&time_delta);
     if (speed < 50) {
         double step = pid_controller(speed, time_delta);
         print_on_serial(time_delta, speed, step);
         handle_step(speed, step);
-        if (abs(speed - setpoint) < 1)
-          is_at_setpoint = true;
+        if (abs(speed - setpoint) < 1) {
+          Serial.println("Mudei o is_at_setponit");
+          is_at_setpoint = false;
+          Serial.println("Is at setpoint is true");
+        }
+          
     }
   }
   timer.tick();
