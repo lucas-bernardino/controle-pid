@@ -88,16 +88,19 @@ void handle_step(float vel, float st) {
 //     }
 // }
 
+
 void valve_stop() {
+    Serial.println("Acionei LOW");
     digitalWrite(RELAY_PIN, LOW);
     cycles++;
     speed_control_state = false;
 }
 
 void valve_handler() {
-    digitalWrite(RELAY_PIN, HIGH);
-    speed_control_state = true;
-    timer.in(10000, valve_stop);
+  Serial.println("Acionei HIGH");
+  digitalWrite(RELAY_PIN, HIGH);
+  speed_control_state = true;
+  timer.in(5000, valve_stop);
 }
 
 void read_from_python() {
@@ -126,9 +129,10 @@ void read_from_python() {
 
 void setup () {
   pinMode(HALL_PIN, INPUT);
+  pinMode(RELAY_PIN, OUTPUT);
   Serial.begin(9600);
   motor.setSpeed(90); 
-  timer.every(5000, valve_handler);
+  timer.every(15000, valve_handler);
   T1 = millis();
 }
 
@@ -138,7 +142,7 @@ void loop () {
     read_from_python();
   }
   if (digitalRead(HALL_PIN) == LOW && speed_control_state && cycles < 10) {
-    speed = get_speed_and_time();
+    speed = get_speed();
     int time_delta = T2 - T1; // Provavelmente esse tempo vai ficar ruim quando voltar do timer, pq vai ter se passado muito tempo.
     if (speed < 50) {
         double step = pid_controller(speed, time_delta);
