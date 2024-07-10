@@ -133,7 +133,7 @@ void loop () {
     delay(1000); // Tempo para iniciar o script no python
     read_from_python();
   }
-  if (digitalRead(HALL_PIN) == LOW && speed_control_state == true && cycles < 10) {
+  if (digitalRead(HALL_PIN) == LOW && cycles < 10) {
     long time_delta = 0;
     speed = get_speed(&time_delta);
     if (speed < 50) {

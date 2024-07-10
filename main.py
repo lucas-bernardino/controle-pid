@@ -5,6 +5,8 @@ import numpy as np
 
 from time import sleep
 
+from datetime import datetime
+
 ser = serial.Serial(port='COM3', baudrate=9600) 
 
 def save_serial_data(path):
@@ -16,6 +18,7 @@ def save_serial_data(path):
 
     while True:
         data = str(ser.readline())
+        print(data)
         if "velocidade" in data:
             _, vel = data.split(":")
             vel = vel[:-5]
@@ -29,6 +32,7 @@ def save_serial_data(path):
             flag_pid = False
             file.write(f"{vel},{pid}") 
             file.write("\n")
+            print(f"Tempo: {datetime.now()} | Velocidade: {vel} | PID: {pid}")
 
 def plot_data(path, setpoint):
     df = pd.read_csv(path)
@@ -56,8 +60,7 @@ def init_parameters(setpoint, kp, ki, kd):
                 ser.write(f"{kp}P".encode())
                 ser.write(f"{ki}I".encode())
                 ser.write(f"{kd}D".encode())
-                            
-
-#init_parameters("35", "0.63", "0.000001", "0.0")
-#save_serial_data("setpoint35_kp_063_ki_106.csv")
-plot_data("setpoint35_kp_063_ki_106.csv", 35)
+                                            
+init_parameters("35", "0.6", "0.00000018", "0.00000045")
+save_serial_data("setpoint14_10;44.csv")
+#plot_data("setpoint14_10;44.csv", 35)
