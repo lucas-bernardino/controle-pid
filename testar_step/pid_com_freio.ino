@@ -1,15 +1,20 @@
-#include <AFMotor.h>
+#include <AccelStepper.h>
 #include <arduino-timer.h>
 
 #define HALL_PIN 13
-#define RELAY_PIN 2
+#define RELAY_PIN 11
 #define R 0.3429
 #define PERIMETER 2 * PI * R
+
+#define motorInterfaceType 1
+#define dirPin 8
+#define stepPin 9
 
 signed long T1 = 0;
 signed long T2 = 0;
 signed long time_seconds = 0;
-AF_Stepper motor(200, 1);
+
+AccelStepper motor(motorInterfaceType, stepPin, dirPin);
 
 float speed = 0;
 int cycles = 0;
@@ -65,13 +70,9 @@ float print_on_serial(int t, float sp, float st) {
     Serial.println(st);
 }
 
-void handle_step(float vel, float st) {
-    if (vel > setpoint) {
-        motor.step(abs(st), FORWARD, MICROSTEP);
-    }
-    if (vel < setpoint) {
-        motor.step(abs(st), BACKWARD, MICROSTEP);
-    }
+void handle_step(float st) {
+    motor.move(st);
+    motor.runToPosition();
 }
 
 void valve_stop() {
@@ -123,12 +124,14 @@ void setup () {
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, LOW);
   Serial.begin(9600);
-  motor.setSpeed(90); 
+  motor.setMaxSpeed(1000);
+  motor.setAcceleration(1000);
   timer.every(15000, valve_handler);
   T1 = millis();
 }
 
-void loop () {
+
+void loop () {  
   if (!is_setup_completed) {
     delay(1000); // Tempo para iniciar o script no python
     read_from_python();
@@ -139,11 +142,9 @@ void loop () {
     if (speed < 50) {
         double step = pid_controller(speed, time_delta);
         print_on_serial(time_delta, speed, step);
-        handle_step(speed, step);
+        handle_step(step);
         if (abs(speed - setpoint) < 1) {
-          Serial.println("Mudei o is_at_setponit");
           is_at_setpoint = false;
-          Serial.println("Is at setpoint is true");
         }
           
     }
