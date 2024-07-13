@@ -7,8 +7,8 @@ from time import sleep
 
 from datetime import datetime
 
-ser_pid = serial.Serial(port='COM4', baudrate=9600) 
-ser_temp = serial.Serial(port='COM5', baudrate=9600)
+ser_pid = serial.Serial(port='COM5', baudrate=9600) 
+#ser_temp = serial.Serial(port='COM5', baudrate=9600)
 
 flag_vel = False
 flag_pid = False
@@ -23,7 +23,7 @@ def save_serial_data(path):
         global flag_vel, flag_pid, flag_temp
 
         data_pid = str(ser_pid.readline())
-        data_temp = str(ser_temp.readline())
+        #data_temp = str(ser_temp.readline())
 
         if "velocidade" in data_pid:
             _, vel = data_pid.split(":")
@@ -33,18 +33,18 @@ def save_serial_data(path):
             _, pid = data_pid.split(":")
             pid = pid[:-5]
             flag_pid = True
-        if "Temperatura" in data_temp:
-            _, temp = data_temp.split(":")
-            temp = temp[:-5]
-            flag_temp = True
+        # if "Temperatura" in data_temp:
+        #     _, temp = data_temp.split(":")
+        #     temp = temp[:-5]
+        #     flag_temp = True
         
-        if flag_vel == True and flag_pid == True and flag_temp == True:
+        if flag_vel == True and flag_pid == True: # and flag_temp == True
             flag_vel = False
             flag_pid = False
             flag_temp = False
-            file.write(f"{vel},{pid},{temp}") 
+            file.write(f"{vel},{pid}") 
             file.write("\n")
-            print(f"Tempo: {datetime.now()} | Velocidade: {vel} | PID: {pid} | Temperatura: {temp}")
+            print(f"Tempo: {datetime.now()} | Velocidade: {vel} | PID: {pid}")
 
 
 def plot_data(path, setpoint):
@@ -75,6 +75,6 @@ def init_parameters(setpoint, kp, ki, kd):
                 ser_pid.write(f"{ki}I".encode())
                 ser_pid.write(f"{kd}D".encode())
 
-init_parameters("17", "0.6", "0.00000018", "0.00000045")
+init_parameters("30", "1.1", "0.000008435", "0.0")
 save_serial_data("setpoint17_1238.csv")
 #plot_data("setpoint17_1238.csv", 17)
