@@ -10,8 +10,10 @@
 #define motorInterfaceType 1
 #define dirPin 8
 #define stepPin 9
+#define enablePin 4
 
-#define NUM_OF_CYCLES 15
+#define NUM_OF_CYCLES 2
+#define MAX_TEMP_SENSOR 35
 
 signed long T1 = 0;
 signed long T2 = 0;
@@ -156,7 +158,10 @@ void loop () {
         float tempIR = getTemperature();
         if (cycles == NUM_OF_CYCLES) {
           is_at_setpoint = true;
-          if (tempIR > 100) {
+          if (tempIR > MAX_TEMP_SENSOR) {
+            print_on_serial(time_delta, speed, 0.00, tempIR);
+            motor.moveTo(0);
+            motor.runToPosition();
             /*
             Se tiver completado um ciclo e a temperatura for maior que 100,
             ele espera e nao faz nada ate a temperatura baixar. Caso seja menor que 100,
