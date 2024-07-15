@@ -42,7 +42,7 @@ def save_serial_data(path):
             flag_temp = False
             file.write(f"{vel},{pid},{temp}") 
             file.write("\n")
-            print(f"Tempo: {datetime.now()} | Velocidade: {vel} | PID: {pid} | Temperatura: {temp} | Temperatura x2.71: {temp*2.71}")
+            print(f"Tempo: {datetime.now()} | Velocidade: {vel} | PID: {pid} | Temperatura: {temp}")
 
 
 def plot_data(path, setpoint):
@@ -69,5 +69,5 @@ def init_parameters(setpoint, kp, ki, kd):
                 ser_pid.write(f"{kd}D".encode())
 
 init_parameters("32", "1.1", "0.000008435", "0.0")
-save_serial_data("teste_pid_e_temp3.csv")
-#plot_data("teste_pid_e_temp2.csv", 35)
+save_serial_data("teste_pid_e_temp5.csv")
+#plot_data("teste_pid_e_temp4.csv", 35)
