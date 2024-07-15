@@ -8,7 +8,6 @@ from time import sleep
 from datetime import datetime
 
 ser_pid = serial.Serial(port='COM5', baudrate=9600) 
-#ser_temp = serial.Serial(port='COM5', baudrate=9600)
 
 flag_vel = False
 flag_pid = False
@@ -23,7 +22,6 @@ def save_serial_data(path):
         global flag_vel, flag_pid, flag_temp
 
         data_pid = str(ser_pid.readline())
-        #data_temp = str(ser_temp.readline())
 
         if "velocidade" in data_pid:
             _, vel = data_pid.split(":")
@@ -33,32 +31,27 @@ def save_serial_data(path):
             _, pid = data_pid.split(":")
             pid = pid[:-5]
             flag_pid = True
-        # if "Temperatura" in data_temp:
-        #     _, temp = data_temp.split(":")
-        #     temp = temp[:-5]
-        #     flag_temp = True
+        if "Temperatura" in data_pid:
+            _, temp = data_pid.split(":")
+            temp = temp[:-5]
+            flag_temp = True
         
-        if flag_vel == True and flag_pid == True: # and flag_temp == True
+        if flag_vel == True and flag_pid == True and flag_temp == True:
             flag_vel = False
             flag_pid = False
             flag_temp = False
-            file.write(f"{vel},{pid}") 
+            file.write(f"{vel},{pid},{temp}") 
             file.write("\n")
-            print(f"Tempo: {datetime.now()} | Velocidade: {vel} | PID: {pid}")
+            print(f"Tempo: {datetime.now()} | Velocidade: {vel} | PID: {pid} | Temperatura: {temp} | Temperatura x2.71: {temp*2.71}")
 
 
 def plot_data(path, setpoint):
     df = pd.read_csv(path)
     velocidade = df["velocidade"].to_numpy()
-    erro = [(x - setpoint) for x in velocidade]
-    pid = df["pid"].to_numpy()
     tempo = np.arange(0, len(velocidade))
     temp = df["temp"].to_numpy()
     plt.plot(tempo, velocidade, label="Velocidade")
-    plt.plot(tempo, erro, label="Erro")
-    plt.plot(tempo, pid, label="Pid")
     plt.plot(tempo, temp, label="Temperatura")
-    plt.yticks(np.arange(min(erro), max(velocidade)))
     plt.legend()
     plt.show()
 
@@ -75,6 +68,6 @@ def init_parameters(setpoint, kp, ki, kd):
                 ser_pid.write(f"{ki}I".encode())
                 ser_pid.write(f"{kd}D".encode())
 
-init_parameters("30", "1.1", "0.000008435", "0.0")
-save_serial_data("setpoint17_1238.csv")
-#plot_data("setpoint17_1238.csv", 17)
+init_parameters("32", "1.1", "0.000008435", "0.0")
+save_serial_data("teste_pid_e_temp3.csv")
+#plot_data("teste_pid_e_temp2.csv", 35)
