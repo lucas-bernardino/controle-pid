@@ -160,8 +160,7 @@ void loop () {
           is_at_setpoint = true;
           if (tempIR > MAX_TEMP_SENSOR) {
             print_on_serial(time_delta, speed, 0.00, tempIR);
-            motor.moveTo(0);
-            motor.runToPosition();
+            digitalWrite(enablePin, HIGH);
             /*
             Se tiver completado um ciclo e a temperatura for maior que 100,
             ele espera e nao faz nada ate a temperatura baixar. Caso seja menor que 100,
@@ -170,6 +169,7 @@ void loop () {
             return;
           } 
           cycles = 0;
+          digitalWrite(enablePin, LOW);
         }
 
         double step = pid_controller(speed, time_delta);
