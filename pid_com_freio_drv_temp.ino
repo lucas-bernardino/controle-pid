@@ -12,7 +12,7 @@
 #define stepPin 9
 #define enablePin 4
 
-#define NUM_OF_CYCLES 2
+#define NUM_OF_CYCLES 10 
 #define MAX_TEMP_SENSOR 35
 
 signed long T1 = 0;
@@ -99,7 +99,7 @@ void valve_handler() {
     Serial.println("Acionei HIGH");
     digitalWrite(RELAY_PIN, HIGH);
     speed_control_state = true;
-    timer.in(5000, valve_stop);
+    timer.in(10000, valve_stop);
   }
 }
 
@@ -141,7 +141,7 @@ void setup () {
   ads.begin();
   motor.setMaxSpeed(1000);
   motor.setAcceleration(1000);
-  timer.every(15000, valve_handler);
+  timer.every(20000, valve_handler);
   T1 = millis();
 }
 
@@ -177,7 +177,7 @@ void loop () {
         print_on_serial(time_delta, speed, step, tempIR);
         handle_step(step);
         
-        if (abs(speed - setpoint) < 1) {
+        if (abs(speed - setpoint) < 3) {
           is_at_setpoint = false;
         }
     }
