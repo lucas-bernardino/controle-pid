@@ -68,6 +68,6 @@ def init_parameters(setpoint, kp, ki, kd):
                 ser_pid.write(f"{ki}I".encode())
                 ser_pid.write(f"{kd}D".encode())
 
-init_parameters("32", "1.1", "0.000008435", "0.0")
-save_serial_data("teste_pid_e_temp5.csv")
-#plot_data("teste_pid_e_temp4.csv", 35)
+init_parameters("33", "1.1", "0.000008435", "0.0")
+save_serial_data("teste_ciclo2.csv")
+#plot_data("teste_ciclo2.csv", 35)
