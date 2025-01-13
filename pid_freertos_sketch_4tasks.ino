@@ -1,6 +1,7 @@
 #include <AccelStepper.h>
 #include <Arduino_FreeRTOS.h>
 #include <queue.h>
+#include <semphr.h>
 
 #define HALL_PIN 13
 #define RELAY_PIN 11
@@ -21,8 +22,10 @@ signed long T1 = 0;
 signed long T2 = 0;
 signed long time_seconds = 0;
 
-float setpoint = 15.0;
+float setpoint = 33;
 float kp = 1.45;
+
+bool is_at_setpoint = false;
 
 double pid_controller(double avg){
   double error = setpoint - avg;
@@ -61,6 +64,9 @@ void TaskSpeed(void *pvParameters) {
       if (speedVal < 55) {
         if (xQueueSend(speedQueue, &speedVal, portMAX_DELAY) != pdTRUE) {
           Serial.println("[ERROR] Failed to send speed to PID task.");    
+        }
+        if (abs(speedVal - setpoint) < 3) {
+          is_at_setpoint = true;
         }
       }
     }
@@ -104,10 +110,14 @@ void TaskValve(void *pvParameters) {
   digitalWrite(RELAY_PIN, LOW);
 
   for (;;) {
-    digitalWrite(RELAY_PIN, HIGH);
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
-    digitalWrite(RELAY_PIN, LOW);
-    vTaskDelay(6000 / portTICK_PERIOD_MS);
+    if (is_at_setpoint) {
+      digitalWrite(RELAY_PIN, HIGH);
+      vTaskDelay(3000 / portTICK_PERIOD_MS);
+      digitalWrite(RELAY_PIN, LOW);
+      vTaskDelay(6000 / portTICK_PERIOD_MS);
+    } else {
+      vTaskDelay(20 / portTICK_PERIOD_MS);
+    }
   }
 }
 
@@ -119,10 +129,10 @@ void setup() {
 
   Serial.println("Starting to create tasks...");
 
-  speedQueue = xQueueCreate(2, sizeof(float));
-  pidQueue = xQueueCreate(2, sizeof(double));
+  speedQueue = xQueueCreate(1, sizeof(float));
+  pidQueue = xQueueCreate(1, sizeof(double));
   
-  if (speedQueue != NULL) {
+  if (speedQueue != NULL && pidQueue != NULL) {
     xTaskCreate(TaskSpeed, "TaskSpeed", 100, NULL, 3, NULL);
     xTaskCreate(TaskPid, "TaskPid", 100, NULL, 1, NULL);
     xTaskCreate(TaskStep, "TaskStep", 100, NULL, 2, NULL);
