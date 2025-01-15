@@ -22,14 +22,24 @@ signed long T1 = 0;
 signed long T2 = 0;
 signed long time_seconds = 0;
 
-float setpoint = 33;
-float kp = 1.45;
+float setpoint = 35;
+float kp = 0.455;
+float ki = 0.000004570;
+float kd = 0.0006570;
+
+float integral_term = 0.0;
+float error_prev = 0.0;
 
 bool is_at_setpoint = false;
+bool setupCompleted = false;
 
-double pid_controller(double avg){
+double pid_controller(double avg, long dt){
   double error = setpoint - avg;
-  return (kp * error);
+  integral_term = integral_term + (error * dt);
+  float derivative_term = (error - error_prev) / dt;
+  error_prev = error;
+
+  return (kp * error) + (kd * derivative_term) + (ki * integral_term);
 }
 
 float get_speed(long* t_delta) {
@@ -49,6 +59,7 @@ void handle_step(double st) {
 
 QueueHandle_t speedQueue;
 QueueHandle_t pidQueue;
+QueueHandle_t timeQueue;
 
 void TaskSpeed(void *pvParameters) {
   pinMode(HALL_PIN, INPUT);
@@ -65,6 +76,9 @@ void TaskSpeed(void *pvParameters) {
         if (xQueueSend(speedQueue, &speedVal, portMAX_DELAY) != pdTRUE) {
           Serial.println("[ERROR] Failed to send speed to PID task.");    
         }
+        if (xQueueSend(timeQueue, &time_delta, portMAX_DELAY) != pdTRUE) {
+          Serial.println("[ERROR] Failed to send time to PID task.");    
+        }
         if (abs(speedVal - setpoint) < 3) {
           is_at_setpoint = true;
         }
@@ -77,10 +91,12 @@ void TaskPid(void *pvParameters) {
 
   float speedReceived = 0.0;
   double stepPID = 0.0;
+  long time_delta = 0;
   
   for (;;) {
-    if (xQueueReceive(speedQueue, &speedReceived, portMAX_DELAY) == pdPASS) {
-      stepPID = pid_controller(speedReceived);
+    if (xQueueReceive(speedQueue, &speedReceived, portMAX_DELAY) == pdPASS && 
+        xQueueReceive(timeQueue, &time_delta, portMAX_DELAY) == pdPASS) {
+      stepPID = pid_controller(speedReceived, time_delta);
       Serial.print("[INFO] Speed: ");
       Serial.print(speedReceived);
       Serial.print(" PID: ");
@@ -131,12 +147,13 @@ void setup() {
 
   speedQueue = xQueueCreate(1, sizeof(float));
   pidQueue = xQueueCreate(1, sizeof(double));
+  timeQueue = xQueueCreate(1, sizeof(long));
   
   if (speedQueue != NULL && pidQueue != NULL) {
-    xTaskCreate(TaskSpeed, "TaskSpeed", 100, NULL, 3, NULL);
-    xTaskCreate(TaskPid, "TaskPid", 100, NULL, 1, NULL);
+    xTaskCreate(TaskSpeed, "TaskSpeed", 128, NULL, 3, NULL);
+    xTaskCreate(TaskPid, "TaskPid", 150, NULL, 1, NULL);
     xTaskCreate(TaskStep, "TaskStep", 100, NULL, 2, NULL);
-    xTaskCreate(TaskValve, "TaskValve", 100, NULL, 3, NULL);
+    xTaskCreate(TaskValve, "TaskValve", 80, NULL, 3, NULL);
     Serial.println("After creating tasks...");
   }
 
