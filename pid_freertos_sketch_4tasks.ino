@@ -3,7 +3,7 @@
 #include <queue.h>
 #include <semphr.h>
 
-#define HALL_PIN 13
+#define HALL_PIN 12
 #define RELAY_PIN 11
 #define R 0.3429
 #define PERIMETER 2 * PI * R
@@ -23,23 +23,20 @@ signed long T2 = 0;
 signed long time_seconds = 0;
 
 float setpoint = 35;
-float kp = 0.455;
-float ki = 0.000004570;
-float kd = 0.0006570;
+float kp = 0.92;
+float kd = (0.4 * 5) / 1000;
 
 float integral_term = 0.0;
 float error_prev = 0.0;
 
 bool is_at_setpoint = false;
-bool setupCompleted = false;
 
 double pid_controller(double avg, long dt){
   double error = setpoint - avg;
-  integral_term = integral_term + (error * dt);
   float derivative_term = (error - error_prev) / dt;
   error_prev = error;
 
-  return (kp * error) + (kd * derivative_term) + (ki * integral_term);
+  return (kp * error) + (kd * derivative_term);
 }
 
 float get_speed(long* t_delta) {
@@ -72,7 +69,7 @@ void TaskSpeed(void *pvParameters) {
     if (digitalRead(HALL_PIN) == LOW) {
       time_delta = 0;
       speedVal = get_speed(&time_delta);
-      if (speedVal < 55) {
+      if (speedVal < 65) {
         if (xQueueSend(speedQueue, &speedVal, portMAX_DELAY) != pdTRUE) {
           Serial.println("[ERROR] Failed to send speed to PID task.");    
         }
@@ -96,11 +93,11 @@ void TaskPid(void *pvParameters) {
   for (;;) {
     if (xQueueReceive(speedQueue, &speedReceived, portMAX_DELAY) == pdPASS && 
         xQueueReceive(timeQueue, &time_delta, portMAX_DELAY) == pdPASS) {
-      stepPID = pid_controller(speedReceived, time_delta);
-      Serial.print("[INFO] Speed: ");
-      Serial.print(speedReceived);
-      Serial.print(" PID: ");
-      Serial.println(stepPID);
+          stepPID = pid_controller(speedReceived, time_delta);
+          Serial.print("[INFO] Speed: ");
+          Serial.print(speedReceived);
+          Serial.print(" PID: ");
+          Serial.println(stepPID);
       if (xQueueSend(pidQueue, &stepPID, portMAX_DELAY) != pdTRUE) {
         Serial.println("[ERROR] Failed to send stepPID to STEP task.");    
       }
