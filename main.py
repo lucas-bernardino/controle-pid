@@ -7,67 +7,41 @@ from time import sleep
 
 from datetime import datetime
 
-ser_pid = serial.Serial(port='COM5', baudrate=9600) 
-
-flag_vel = False
-flag_pid = False
-flag_temp = False
-
-def save_serial_data(path):
-    file = open(path, "w")
-    file.write("velocidade,pid,temp") # Colunas
-    file.write("\n")
-
-    while True:
-        global flag_vel, flag_pid, flag_temp
-
-        data_pid = str(ser_pid.readline())
-
-        if "velocidade" in data_pid:
-            _, vel = data_pid.split(":")
-            vel = vel[:-5]
-            flag_vel = True
-        if "pid" in data_pid:
-            _, pid = data_pid.split(":")
-            pid = pid[:-5]
-            flag_pid = True
-        if "Temperatura" in data_pid:
-            _, temp = data_pid.split(":")
-            temp = temp[:-5]
-            flag_temp = True
-        
-        if flag_vel == True and flag_pid == True and flag_temp == True:
-            flag_vel = False
-            flag_pid = False
-            flag_temp = False
-            file.write(f"{vel},{pid},{temp}") 
-            file.write("\n")
-            print(f"Tempo: {datetime.now()} | Velocidade: {vel} | PID: {pid} | Temperatura: {temp}")
-
+ser_pid = serial.Serial(port='COM4', baudrate=9600) 
 
 def plot_data(path, setpoint):
     df = pd.read_csv(path)
     velocidade = df["velocidade"].to_numpy()
+    pid = df["pid"].to_numpy()
     tempo = np.arange(0, len(velocidade))
-    temp = df["temp"].to_numpy()
     plt.plot(tempo, velocidade, label="Velocidade")
-    plt.plot(tempo, temp, label="Temperatura")
+    plt.plot(tempo, pid, label="PID")
+    plt.plot(tempo, [setpoint for i in range(len(tempo))], label="Setpoint")
     plt.legend()
     plt.show()
 
-def init_parameters(setpoint, kp, ki, kd):
+def arduino_uno_communication(path):
+    file = open(path, "w")
+    file.write("velocidade,pid")
+    file.write("\n")
+    print("I'll start to read")
     while True:
-        is_ready = str(ser_pid.readline())
-        if "Ready" in is_ready:
-            while True:
-                if "setup_completed" in str(ser_pid.readline()):
-                    print("Parameters initialized successfully.")
-                    return
-                ser_pid.write(f"{setpoint}S".encode())
-                ser_pid.write(f"{kp}P".encode())
-                ser_pid.write(f"{ki}I".encode())
-                ser_pid.write(f"{kd}D".encode())
+        try:
+            serial_data = str(ser_pid.readline().decode())
+            if "INFO" in serial_data:
+                serial_data = serial_data.replace("INFO", "").rstrip()
+                vel, pid = serial_data.split(",")
+                print(f"[INFO] Velocidade: {vel} | PID: {pid}")
+                file.write(f"{vel},{pid}") 
+                file.write("\n")
+            else:
+                print(serial_data)
+        except Exception as e:
+            print(f'Leaving: {e}')
+            break
 
-init_parameters("32", "1.1", "0.000008435", "0.0")
-save_serial_data("teste_pid_e_temp5.csv")
-#plot_data("teste_pid_e_temp4.csv", 35)
+current_time = f"{datetime.now()}"
+file_name = current_time.split()[1].replace(":", "-").replace(".","")
+
+arduino_uno_communication("teste4.csv")
+#plot_data("teste4.csv", 35)
