@@ -23,8 +23,8 @@ signed long T2 = 0;
 signed long time_seconds = 0;
 
 float setpoint = 35;
-float kp = 0.92;
-float kd = (0.4 * 5) / 1000;
+float kp = 0.64;
+float kd = 0.00048;
 
 float integral_term = 0.0;
 float error_prev = 0.0;
@@ -64,6 +64,8 @@ void TaskSpeed(void *pvParameters) {
   float speedVal = 0.0;
   long time_delta = 0;
   T1 = millis();
+
+  int timesPassedThroughSetpoint = 0;
   
   for (;;) {
     if (digitalRead(HALL_PIN) == LOW) {
@@ -76,9 +78,12 @@ void TaskSpeed(void *pvParameters) {
         if (xQueueSend(timeQueue, &time_delta, portMAX_DELAY) != pdTRUE) {
           Serial.println("[ERROR] Failed to send time to PID task.");    
         }
-        if (abs(speedVal - setpoint) < 3) {
-          is_at_setpoint = true;
+        if (abs(speedVal - setpoint) < 2) {
+          timesPassedThroughSetpoint++;
         }
+        if (timesPassedThroughSetpoint > 10 && speedVal > 35) {
+          is_at_setpoint = true;
+        } 
       }
     }
   }
@@ -94,9 +99,9 @@ void TaskPid(void *pvParameters) {
     if (xQueueReceive(speedQueue, &speedReceived, portMAX_DELAY) == pdPASS && 
         xQueueReceive(timeQueue, &time_delta, portMAX_DELAY) == pdPASS) {
           stepPID = pid_controller(speedReceived, time_delta);
-          Serial.print("[INFO] Speed: ");
+          Serial.print("INFO");
           Serial.print(speedReceived);
-          Serial.print(" PID: ");
+          Serial.print(",");
           Serial.println(stepPID);
       if (xQueueSend(pidQueue, &stepPID, portMAX_DELAY) != pdTRUE) {
         Serial.println("[ERROR] Failed to send stepPID to STEP task.");    
@@ -120,14 +125,14 @@ void TaskStep(void *pvParameters) {
 
 void TaskValve(void *pvParameters) {
   pinMode(RELAY_PIN, OUTPUT);
-  digitalWrite(RELAY_PIN, LOW);
+  digitalWrite(RELAY_PIN, HIGH);
 
   for (;;) {
     if (is_at_setpoint) {
-      digitalWrite(RELAY_PIN, HIGH);
-      vTaskDelay(3000 / portTICK_PERIOD_MS);
       digitalWrite(RELAY_PIN, LOW);
-      vTaskDelay(6000 / portTICK_PERIOD_MS);
+      vTaskDelay(10000 / portTICK_PERIOD_MS);
+      digitalWrite(RELAY_PIN, HIGH);
+      vTaskDelay(5000 / portTICK_PERIOD_MS);
     } else {
       vTaskDelay(20 / portTICK_PERIOD_MS);
     }
