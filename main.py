@@ -16,6 +16,8 @@ class BikeState:
         self.t2 = None
         self.t3 = None
 
+        self.previous_temps = [None, None, None]
+
         self.lock = threading.Lock()
 
         self.file = open(path, "w")
@@ -53,23 +55,41 @@ class BikeState:
             self.t2 = float(new_t2)
             self.t3 = float(new_t3)
 
+            self.previous_temps = [self.t1, self.t2, self.t3]
+
     def print_state_formated(self):
         print(f"[INFO] Velocidade: {self.vel} | PID: {self.pid} | T1: {self.t1} | T2: {self.t2} | T3: {self.t3}")
 
-bikeState = BikeState("test_thread.csv")
+    def get_average_temperature(self):
+        with self.lock:
+            # TODO: Dont forget to use all three termopars. Im only use these because
+            # the first one has connection issues.
+            return (self.previous_temps[1] + self.previous_temps[2]) / 2
+
+bikeState = BikeState("apos_esfriar.csv")
+
 
 def arduino_uno_communication():
     print("I'll start to read")
+    count_inutil = 0
     while True:
         try:
             serial_data = str(ser_pid.readline().decode())
             if "INFO" in serial_data:
                 serial_data = serial_data.replace("INFO", "").rstrip()
                 vel, pid = serial_data.split(",")
-                #print(f"[INFO UNO] Velocidade: {vel} | PID: {pid}")
                 bikeState.update_uno_data(vel, pid)
-            else:
-                print(serial_data)
+            elif "end_cycle" in serial_data:
+                bikeState.update_uno_data(15.0, 0.0)
+                current_temp = bikeState.get_average_temperature()
+
+                # TODO: Since this is still a test, remember to check 
+                # if current_tempo is below 100 when bluetooth temperature is installed
+                # correctly
+                count_inutil +=1
+                if count_inutil > 20:
+                    count_inutil = 0
+                    ser_pid.write("continue\n".encode())
         except Exception as e:
             print(f'Leaving: {e}')
             break
@@ -79,7 +99,6 @@ def arduino_nano_communication():
         raw_data = termopar.readline().decode().rstrip().split(",")
         raw_data = [x.strip() for x in raw_data]
         t1, t2, t3 = float(raw_data[0]), float(raw_data[1]), float(raw_data[2])
-        #print(f"[INFO NANO] T1: {t1} | T2: {t2} | T3: {t3}")
         bikeState.update_nano_data(t1, t2, t3)
 
 def global_handler():
@@ -108,14 +127,3 @@ except KeyboardInterrupt:
     bikeState.close_file()
     print("Program terminated.")
 
-def plot_data(path, setpoint):
-    df = pd.read_csv(path)
-    velocidade = df["velocidade"].to_numpy()
-    pid = df["pid"].to_numpy()
-    tempo = np.arange(0, len(velocidade))
-    plt.plot(tempo, velocidade, label="Velocidade")
-    plt.plot(tempo, pid, label="PID")
-    plt.plot(tempo, [setpoint for i in range(len(tempo))], label="Setpoint")
-    plt.legend()
-    plt.show()
-#plot_data("test_thread.csv", 35)
