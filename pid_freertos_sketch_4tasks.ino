@@ -13,7 +13,7 @@
 #define stepPin 9
 #define enablePin 4
 
-#define NUM_OF_CYCLES 10 
+#define NUM_OF_CYCLES 3
 #define MAX_TEMP_SENSOR 35
 
 AccelStepper motor(motorInterfaceType, stepPin, dirPin);
@@ -23,13 +23,16 @@ signed long T2 = 0;
 signed long time_seconds = 0;
 
 float setpoint = 35;
-float kp = 0.64;
-float kd = 0.00048;
+float kp = 0.7;
+float kd = 0.00058;
 
 float integral_term = 0.0;
 float error_prev = 0.0;
 
 bool is_at_setpoint = false;
+
+int count_cycles = 0;
+int timesPassedThroughSetpoint = 0;
 
 double pid_controller(double avg, long dt){
   double error = setpoint - avg;
@@ -58,14 +61,16 @@ QueueHandle_t speedQueue;
 QueueHandle_t pidQueue;
 QueueHandle_t timeQueue;
 
+TaskHandle_t handleTaskSpeed;
+TaskHandle_t handleTaskPid;
+TaskHandle_t handleTaskStep;
+
 void TaskSpeed(void *pvParameters) {
   pinMode(HALL_PIN, INPUT);
 
   float speedVal = 0.0;
   long time_delta = 0;
   T1 = millis();
-
-  int timesPassedThroughSetpoint = 0;
   
   for (;;) {
     if (digitalRead(HALL_PIN) == LOW) {
@@ -129,10 +134,35 @@ void TaskValve(void *pvParameters) {
 
   for (;;) {
     if (is_at_setpoint) {
-      digitalWrite(RELAY_PIN, LOW);
-      vTaskDelay(10000 / portTICK_PERIOD_MS);
-      digitalWrite(RELAY_PIN, HIGH);
-      vTaskDelay(5000 / portTICK_PERIOD_MS);
+      if (count_cycles == NUM_OF_CYCLES) {
+        vTaskSuspend( handleTaskSpeed );
+        vTaskSuspend( handleTaskPid );
+        vTaskSuspend( handleTaskStep );
+
+        digitalWrite(enablePin, HIGH); // Turn off motor
+
+
+        Serial.println("end_cycle"); // Keep in mind this will keep printing 'end_cycle'
+
+        if (Serial.readStringUntil('\n') == "continue") {
+            count_cycles = 0;
+            is_at_setpoint = false;
+            timesPassedThroughSetpoint = 0;
+            
+            vTaskResume( handleTaskSpeed );
+            vTaskResume( handleTaskPid );
+            vTaskResume( handleTaskStep );
+
+            digitalWrite(enablePin, LOW); // Turn on motor
+        }
+
+      } else {
+        digitalWrite(RELAY_PIN, LOW);
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
+        digitalWrite(RELAY_PIN, HIGH);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        count_cycles++;
+      }
     } else {
       vTaskDelay(20 / portTICK_PERIOD_MS);
     }
@@ -152,14 +182,14 @@ void setup() {
   timeQueue = xQueueCreate(1, sizeof(long));
   
   if (speedQueue != NULL && pidQueue != NULL) {
-    xTaskCreate(TaskSpeed, "TaskSpeed", 128, NULL, 3, NULL);
-    xTaskCreate(TaskPid, "TaskPid", 150, NULL, 1, NULL);
-    xTaskCreate(TaskStep, "TaskStep", 100, NULL, 2, NULL);
+    xTaskCreate(TaskSpeed, "TaskSpeed", 128, NULL, 3, &handleTaskSpeed);
+    xTaskCreate(TaskPid, "TaskPid", 150, NULL, 1, &handleTaskPid);
+    xTaskCreate(TaskStep, "TaskStep", 100, NULL, 2, &handleTaskStep);
     xTaskCreate(TaskValve, "TaskValve", 80, NULL, 3, NULL);
     Serial.println("After creating tasks...");
   }
 
-  Serial.println("Tasks should start now!");
+  Serial.println("Tasks should start now!!");
 
 }
 
