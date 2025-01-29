@@ -5,7 +5,7 @@ import numpy as np
 from datetime import datetime
 import threading
 
-ser_pid = serial.Serial(port='COM4', baudrate=9600) 
+ser_pid = serial.Serial(port='COM4', baudrate=9600, timeout=0.5) 
 termopar = serial.Serial("COM6", baudrate=9600)
 
 class BikeState:
@@ -74,12 +74,13 @@ def arduino_uno_communication():
     count_inutil = 0
     while True:
         try:
-            serial_data = str(ser_pid.readline().decode())
+            serial_data = ser_pid.read(ser_pid.in_waiting).decode()
             if "INFO" in serial_data:
                 serial_data = serial_data.replace("INFO", "").rstrip()
                 vel, pid = serial_data.split(",")
                 bikeState.update_uno_data(vel, pid)
             elif "end_cycle" in serial_data:
+                print("--- FIM DE UM CICLO ---\n\n\n")
                 bikeState.update_uno_data(15.0, 0.0)
                 current_temp = bikeState.get_average_temperature()
 
