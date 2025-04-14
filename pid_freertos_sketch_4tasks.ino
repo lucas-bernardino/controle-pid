@@ -13,7 +13,7 @@
 #define stepPin 9
 #define enablePin 4
 
-#define NUM_OF_CYCLES 3
+#define NUM_OF_CYCLES 10
 #define MAX_TEMP_SENSOR 35
 
 AccelStepper motor(motorInterfaceType, stepPin, dirPin);
@@ -23,8 +23,8 @@ signed long T2 = 0;
 signed long time_seconds = 0;
 
 float setpoint = 35;
-float kp = 0.7;
-float kd = 0.00058;
+float kp = 0.58;
+float kd = 0.00083;
 
 float integral_term = 0.0;
 float error_prev = 0.0;
@@ -158,9 +158,9 @@ void TaskValve(void *pvParameters) {
 
       } else {
         digitalWrite(RELAY_PIN, LOW);
-        vTaskDelay(10000 / portTICK_PERIOD_MS);
-        digitalWrite(RELAY_PIN, HIGH);
         vTaskDelay(5000 / portTICK_PERIOD_MS);
+        digitalWrite(RELAY_PIN, HIGH);
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
         count_cycles++;
       }
     } else {
