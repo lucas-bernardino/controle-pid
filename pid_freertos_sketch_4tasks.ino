@@ -60,6 +60,7 @@ void handle_step(double st) {
 QueueHandle_t speedQueue;
 QueueHandle_t pidQueue;
 QueueHandle_t timeQueue;
+QueueHandle_t breakingQueue;
 
 TaskHandle_t handleTaskSpeed;
 TaskHandle_t handleTaskPid;
@@ -121,16 +122,38 @@ void TaskStep(void *pvParameters) {
   motor.setMaxSpeed(1000);
   motor.setAcceleration(1000);
 
+  float multiplicationFactor = 1.0;
+  int breakingPart = 0;
+  int prevBreakingPart = 0;
+  int count = 3;
+
   for (;;) {
     if (xQueueReceive(pidQueue, &stepPID, portMAX_DELAY) == pdPASS) {
-      handle_step(stepPID);
+      if (breakingPart == 1 && count > 0) { // More torque
+        multiplicationFactor = 0.6;
+        count--;   
+      }
+      // If there was a way to override the steps..........
+      if (breakingPart == -1 && count > 0) { // Less torque
+        multiplicationFactor = 0.2;
+        count--;   
+      }
+      handle_step(stepPID * multiplicationFactor);
     }
+    if (xQueueReceive(breakingQueue, &breakingPart, 20 / portTICK_PERIOD_MS) == pdPASS) {
+      if (breakingPart != prevBreakingPart) {
+        count = 3;
+        prevBreakingPart = breakingPart;
+      }
+    };
   }
 }
 
 void TaskValve(void *pvParameters) {
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, HIGH);
+
+  int breakingPart = 0;
 
   for (;;) {
     if (is_at_setpoint) {
@@ -158,8 +181,16 @@ void TaskValve(void *pvParameters) {
 
       } else {
         digitalWrite(RELAY_PIN, LOW);
+        breakingPart = 1; // More torque
+        if (xQueueSend(breakingQueue, &breakingPart, portMAX_DELAY) != pdTRUE) {
+          Serial.println("[ERROR] Failed to send breakingQueue to STEP task.");    
+        }
         vTaskDelay(5000 / portTICK_PERIOD_MS);
         digitalWrite(RELAY_PIN, HIGH);
+        breakingPart = -1; // Less torque
+        if (xQueueSend(breakingQueue, &breakingPart, portMAX_DELAY) != pdTRUE) {
+          Serial.println("[ERROR] Failed to send breakingQueue to STEP task.");    
+        }
         vTaskDelay(10000 / portTICK_PERIOD_MS);
         count_cycles++;
       }
@@ -180,6 +211,7 @@ void setup() {
   speedQueue = xQueueCreate(1, sizeof(float));
   pidQueue = xQueueCreate(1, sizeof(double));
   timeQueue = xQueueCreate(1, sizeof(long));
+  breakingQueue = xQueueCreate(1, sizeof(int));
   
   if (speedQueue != NULL && pidQueue != NULL) {
     xTaskCreate(TaskSpeed, "TaskSpeed", 128, NULL, 3, &handleTaskSpeed);
